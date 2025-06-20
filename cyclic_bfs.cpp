@@ -1,36 +1,60 @@
 #include <iostream>
 #include <vector>
 #include <queue>
+#include <stack>
+#include <algorithm>
 
 using namespace std;
 
-bool bfsCycle(int start, vector<vector<int>>& adjMatrix, vector<bool>& visited, vector<int>& cyclePath) {
-    int V = adjMatrix.size();
+const int V = 7; 
+
+
+char vertexName(int index) {
+    return 'A' + index;
+}
+
+int adjMatrix[V][V] = {
+    {0, 0, 1, 0, 0, 0, 0}, 
+    {0, 0, 1, 0, 0, 0, 0}, 
+    {0, 0, 0, 0, 1, 1, 1},
+    {1, 0, 0, 0, 1, 0, 0},
+    {1, 0, 0, 0, 0, 0, 0},
+    {0, 1, 0, 0, 0, 0, 0}, 
+    {0, 0, 0, 0, 0, 0, 0} 
+};
+
+bool bfsDirected(int start, vector<char>& cycle) {
+    vector<bool> visited(V, false);
+    vector<bool> inQueue(V, false);
     vector<int> parent(V, -1);
     queue<int> q;
 
     q.push(start);
     visited[start] = true;
+    inQueue[start] = true;
 
     while (!q.empty()) {
-        int curr = q.front();
+        int u = q.front();
         q.pop();
+        inQueue[u] = false;
 
-        for (int neighbor = 0; neighbor < V; ++neighbor) {
-            if (adjMatrix[curr][neighbor]) {
-                if (!visited[neighbor]) {
-                    visited[neighbor] = true;
-                    parent[neighbor] = curr;
-                    q.push(neighbor);
-                } else if (parent[curr] != neighbor) {
-                    cyclePath.clear();
-                    int x = curr, y = neighbor;
-                    cyclePath.push_back(y);
-                    while (x != -1 && x != y) {
-                        cyclePath.push_back(x);
-                        x = parent[x];
+        for (int v = 0; v < V; ++v) {
+            if (adjMatrix[u][v]) {
+                if (!visited[v]) {
+                    visited[v] = true;
+                    parent[v] = u;
+                    q.push(v);
+                    inQueue[v] = true;
+                } else if (inQueue[v]) {
+                    cycle.clear();
+                    cycle.push_back(vertexName(v));
+                    int curr = u;
+                    while (curr != v && curr != -1) {
+                        cycle.push_back(vertexName(curr));
+                        curr = parent[curr];
                     }
-                    cyclePath.push_back(y);
+                    cycle.push_back(vertexName(v));
+                    reverse(cycle.begin(), cycle.end());
                     return true;
                 }
             }
@@ -40,14 +64,38 @@ bool bfsCycle(int start, vector<vector<int>>& adjMatrix, vector<bool>& visited, 
     return false;
 }
 
-bool isCyclic(vector<vector<int>>& adjMatrix, vector<int>& cyclePath) {
-    int V = adjMatrix.size();
+bool bfsUndirected(int start, vector<char>& cycle) {
     vector<bool> visited(V, false);
+    vector<int> parent(V, -1);
+    queue<int> q;
 
-    for (int i = 0; i < V; ++i) {
-        if (!visited[i]) {
-            if (bfsCycle(i, adjMatrix, visited, cyclePath))
-                return true;
+    visited[start] = true;
+    q.push(start);
+
+    while (!q.empty()) {
+        int u = q.front();
+        q.pop();
+
+        for (int v = 0; v < V; ++v) {
+            if (adjMatrix[u][v] || adjMatrix[v][u]) {
+                if (!visited[v]) {
+                    visited[v] = true;
+                    parent[v] = u;
+                    q.push(v);
+                } else if (v != parent[u]) {
+                    // Cycle found
+                    cycle.clear();
+                    int curr = u;
+                    while (curr != -1) {
+                        cycle.push_back(vertexName(curr));
+                        if (curr == v) break;
+                        curr = parent[curr];
+                    }
+                    cycle.push_back(vertexName(v));
+                    reverse(cycle.begin(), cycle.end());
+                    return true;
+                }
+            }
         }
     }
 
@@ -55,23 +103,26 @@ bool isCyclic(vector<vector<int>>& adjMatrix, vector<int>& cyclePath) {
 }
 
 int main() {
-    vector<vector<int>> adjMatrix = {
-        {0, 1, 0, 0, 1},
-        {1, 0, 1, 1, 0},
-        {0, 1, 0, 0, 0},
-        {0, 1, 0, 0, 1},
-        {1, 0, 0, 1, 0}
-    };
+    vector<char> cycle;
 
-    vector<int> cyclePath;
-    if (isCyclic(adjMatrix, cyclePath)) {
-        cout << "Graph contains a cycle.\n";
-        cout << "Cycle path: ";
-        for (int v : cyclePath)
-            cout << v << " ";
+    cout << "=== Cycle Detection using BFS (Directed Graph) ===\n";
+    if (bfsDirected(3, cycle)) { 
+        cout << "Cycle detected: ";
+        for (char c : cycle)
+            cout << c << " ";
         cout << endl;
     } else {
-        cout << "Graph does not contain any cycle.\n";
+        cout << "No cycle detected in directed graph.\n";
+    }
+
+    cout << "\n=== Cycle Detection using BFS (Undirected Graph) ===\n";
+    if (bfsUndirected(3, cycle)) {
+        cout << "Cycle detected: ";
+        for (char c : cycle)
+            cout << c << " ";
+        cout << endl;
+    } else {
+        cout << "No cycle detected in undirected graph.\n";
     }
 
     return 0;
