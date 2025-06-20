@@ -1,125 +1,103 @@
 #include <iostream>
 #include <vector>
-#include <queue>
 #include <stack>
 #include <algorithm>
 
 using namespace std;
 
-const int V = 7; 
+const int V = 7;
 
-
-char vertexName(int index) {
-    return 'A' + index;
+char vertexName(int i) {
+    return 'A' + i;
 }
 
 int adjMatrix[V][V] = {
     {0, 0, 1, 0, 0, 0, 0}, 
     {0, 0, 1, 0, 0, 0, 0}, 
-    {0, 0, 0, 0, 1, 1, 1},
-    {1, 0, 0, 0, 1, 0, 0},
-    {1, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 1, 1, 1}, 
+    {1, 0, 0, 0, 1, 0, 0}, 
+    {1, 0, 0, 0, 0, 0, 0}, 
     {0, 1, 0, 0, 0, 0, 0}, 
-    {0, 0, 0, 0, 0, 0, 0} 
+    {0, 0, 0, 0, 0, 0, 0}  
 };
 
-bool bfsDirected(int start, vector<char>& cycle) {
-    vector<bool> visited(V, false);
-    vector<bool> inQueue(V, false);
-    vector<int> parent(V, -1);
-    queue<int> q;
+bool dfsDirected(int u, vector<bool>& visited, vector<bool>& inStack, vector<int>& parent, vector<char>& cycle) {
+    visited[u] = true;
+    inStack[u] = true;
 
-    q.push(start);
-    visited[start] = true;
-    inQueue[start] = true;
-
-    while (!q.empty()) {
-        int u = q.front();
-        q.pop();
-        inQueue[u] = false;
-
-        for (int v = 0; v < V; ++v) {
-            if (adjMatrix[u][v]) {
-                if (!visited[v]) {
-                    visited[v] = true;
-                    parent[v] = u;
-                    q.push(v);
-                    inQueue[v] = true;
-                } else if (inQueue[v]) {
-                    cycle.clear();
-                    cycle.push_back(vertexName(v));
-                    int curr = u;
-                    while (curr != v && curr != -1) {
-                        cycle.push_back(vertexName(curr));
-                        curr = parent[curr];
-                    }
-                    cycle.push_back(vertexName(v));
-                    reverse(cycle.begin(), cycle.end());
+    for (int v = 0; v < V; ++v) {
+        if (adjMatrix[u][v]) {
+            if (!visited[v]) {
+                parent[v] = u;
+                if (dfsDirected(v, visited, inStack, parent, cycle))
                     return true;
+            } else if (inStack[v]) {
+                cycle.clear();
+                int curr = u;
+                cycle.push_back(vertexName(v));
+                while (curr != v && curr != -1) {
+                    cycle.push_back(vertexName(curr));
+                    curr = parent[curr];
                 }
+                cycle.push_back(vertexName(v));
+                reverse(cycle.begin(), cycle.end());
+                return true;
             }
         }
     }
 
+    inStack[u] = false;
     return false;
 }
 
-bool bfsUndirected(int start, vector<char>& cycle) {
-    vector<bool> visited(V, false);
-    vector<int> parent(V, -1);
-    queue<int> q;
+bool dfsUndirected(int u, int parentU, vector<bool>& visited, vector<int>& parent, vector<char>& cycle) {
+    visited[u] = true;
 
-    visited[start] = true;
-    q.push(start);
-
-    while (!q.empty()) {
-        int u = q.front();
-        q.pop();
-
-        for (int v = 0; v < V; ++v) {
-            if (adjMatrix[u][v] || adjMatrix[v][u]) {
-                if (!visited[v]) {
-                    visited[v] = true;
-                    parent[v] = u;
-                    q.push(v);
-                } else if (v != parent[u]) {
-                    // Cycle found
-                    cycle.clear();
-                    int curr = u;
-                    while (curr != -1) {
-                        cycle.push_back(vertexName(curr));
-                        if (curr == v) break;
-                        curr = parent[curr];
-                    }
-                    cycle.push_back(vertexName(v));
-                    reverse(cycle.begin(), cycle.end());
+    for (int v = 0; v < V; ++v) {
+        if (adjMatrix[u][v] || adjMatrix[v][u]) { 
+            if (!visited[v]) {
+                parent[v] = u;
+                if (dfsUndirected(v, u, visited, parent, cycle))
                     return true;
+            } else if (v != parentU) {
+                cycle.clear();
+                int curr = u;
+                while (curr != -1) {
+                    cycle.push_back(vertexName(curr));
+                    if (curr == v) break;
+                    curr = parent[curr];
                 }
+                cycle.push_back(vertexName(v));
+                reverse(cycle.begin(), cycle.end());
+                return true;
             }
         }
     }
-
     return false;
 }
 
 int main() {
     vector<char> cycle;
 
-    cout << "=== Cycle Detection using BFS (Directed Graph) ===\n";
-    if (bfsDirected(3, cycle)) { 
+    vector<bool> visitedDir(V, false), inStack(V, false);
+    vector<int> parentDir(V, -1);
+
+    cout << "=== DFS Cycle Detection (Directed Graph) ===\n";
+    if (dfsDirected(3, visitedDir, inStack, parentDir, cycle)) {
         cout << "Cycle detected: ";
-        for (char c : cycle)
-            cout << c << " ";
+        for (char c : cycle) cout << c << " ";
         cout << endl;
     } else {
         cout << "No cycle detected in directed graph.\n";
     }
 
-    cout << "\n=== Cycle Detection using BFS (Undirected Graph) ===\n";
-    if (bfsUndirected(3, cycle)) {
+    vector<bool> visitedUndir(V, false);
+    vector<int> parentUndir(V, -1);
+
+    cout << "\n=== DFS Cycle Detection (Undirected Graph) ===\n";
+    if (dfsUndirected(3, -1, visitedUndir, parentUndir, cycle)) {
         cout << "Cycle detected: ";
-        for (char c : cycle)
-            cout << c << " ";
+        for (char c : cycle) cout << c << " ";
         cout << endl;
     } else {
         cout << "No cycle detected in undirected graph.\n";
